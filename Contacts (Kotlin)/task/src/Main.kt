@@ -1,10 +1,53 @@
 package contacts
 
-fun main() {
-    val contact = gatherContactInfo()
+const val RECORD_ADDED_MESSAGE = "The record added."
+const val NO_RECORDS_TO_REMOVE_MESSAGE = "No records to remove!"
+const val NO_RECORDS_TO_EDIT_MESSAGE = "No records to edit!"
+const val ENTER_ACTION_MESSAGE = "Enter action (add, remove, edit, count, list, exit):"
+const val CONTACT_LIST_EMPTY_MESSAGE = "The Phone Book has 0 records."
 
-    println("A record created!")
-    println("A Phone Book with a single record created!")
+val contacts = mutableListOf<Contact>()
+
+fun main() {
+    while (true) {
+        println(ENTER_ACTION_MESSAGE)
+
+        val input = readln()
+
+        when (input.lowercase()) {
+            "add" -> {
+                val contact = collectContactInfo()
+                contacts.add(contact)
+                println(RECORD_ADDED_MESSAGE)
+            }
+
+            "remove" -> {
+                if (contacts.isEmpty()) {
+                    println(NO_RECORDS_TO_REMOVE_MESSAGE)
+                }
+            }
+
+            "edit" -> {
+                if (contacts.isEmpty()) {
+                    println(NO_RECORDS_TO_EDIT_MESSAGE)
+                }
+            }
+
+            "count" -> {
+                if (contacts.isEmpty()) {
+                    println(CONTACT_LIST_EMPTY_MESSAGE)
+                }
+            }
+
+            "list" -> {
+
+            }
+
+            "exit" -> {
+                TODO()
+            }
+        }
+    }
 }
 
 /**
@@ -13,7 +56,7 @@ fun main() {
  *
  * @return A new Contact object with the input information.
  */
-private fun gatherContactInfo(): Contact {
+private fun collectContactInfo(): Contact {
     println("Enter the name of the person:")
     val name = readln()
 
@@ -23,10 +66,35 @@ private fun gatherContactInfo(): Contact {
 
     /* Read the phone number of the contact from input. */
     println("Enter the number:")
-    val number = readln()
+    var number = readln()
+
+    /* Check if the phone number format is correct. If it's incorrect make the number blank
+    * and print an error message. */
+    if (!verifyNumberFormat(number)) {
+        number = ""
+        println("Wrong number format!")
+    }
 
     /* Create a contact given the information input. */
     return Contact(name, surname, number)
+}
+
+/**
+ * Check if the value passed is matches a valid phone number format.
+ * This method uses regex and pattern matching to determine validity.
+ *
+ * @param value The phone number to check.
+ * @return True if the number is valid.
+ */
+private fun verifyNumberFormat(value: String): Boolean {
+    /* This regex will match:
+     * "+0 (123) 456-789-ABcd" and "(123) 234 345-456"
+     *
+     * This regex will not match "+0(123)456-789-9999" */
+    val phoneNumberRegex = Regex("(\\+\\d)? ?(\\(\\d{3}\\)|\\d{3})[ -]{1}\\d{3}[ -]{1}\\d{3}-[^\\W_]{3,4}")
+
+    /* Check if the number value matches the regex and return the result. */
+    return value.matches(phoneNumberRegex)
 }
 
 /**
@@ -35,35 +103,20 @@ private fun gatherContactInfo(): Contact {
 data class Contact(val name: String, val surname: String, private var number: String = "") {
     /**
      * Sets the phone number of the contact. The number is checked to make sure it matches
-     * a phone number regex before setting the value of the property. If the phone number
-     * doesn't have the correct format, a PhoneNumberFormatException is thrown.
+     * a phone number regex before setting the value of the field.
      *
      * @param value The new phone number
      */
-    fun setNumber(value: String) {
-        /* This regex will match:
-         * "+0 (123) 456-789-ABcd" and "(123) 234 345-456"
-         *
-         * This regex will not match "+0(123)456-789-9999" */
-        val phoneNumberRegex = Regex("(\\+\\d)? ?(\\(\\d{3}\\)|\\d{3})[ -]{1}\\d{3}[ -]{1}\\d{3}-[^\\W_]{3,4}")
-
-        /* Check if the number value matches the regex, and throw an error if it doesn't. */
-        if (!value.matches(phoneNumberRegex)) throw PhoneNumberFormatException()
+    fun setNumber(number: String) {
+        this.number = number
     }
-
 
     /**
      * Checks if this contact has a phone number assigned to it.
      *
-     * @return <code>True</code> if this contact has a phone number.
+     * @return True if this contact has a phone number.
      */
     fun hasNumber(): Boolean {
-        TODO("Impl.")
+        return !(number.isBlank() || number.isEmpty())
     }
 }
-
-/**
- * An exception thrown when a phone number strings format isn't valid.
- */
-class PhoneNumberFormatException() : Exception("The number format is invalid.")
-
