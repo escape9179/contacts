@@ -42,12 +42,9 @@ data class Contact(val name: String, val surname: String, private var number: St
      */
     fun setNumber(value: String) {
         /* This regex will match:
-         * "+0 (123) 456-789-ABcd" and "(123) 234 345-456", etc.
+         * "+0 (123) 456-789-ABcd" and "(123) 234 345-456"
          *
-         * This regex will not match "+0(123)456-789-9999", etc.
-         *
-         * Regex visual: https://regexper.com/#%28%5C%2B%5Cd%29%3F%20%3F%28%5C%28%5Cd%7B3%7D%5C%29%7C%5Cd%7B3%7D%29%5B%20-%5D%7B1%7D%5Cd%7B3%7D%5B%20-%5D%7B1%7D%5Cd%7B3%7D-%5B%5E%5CW_%5D%7B4%7D
-         */
+         * This regex will not match "+0(123)456-789-9999" */
         val phoneNumberRegex = Regex("(\\+\\d)? ?(\\(\\d{3}\\)|\\d{3})[ -]{1}\\d{3}[ -]{1}\\d{3}-[^\\W_]{3,4}")
 
         /* Check if the number value matches the regex, and throw an error if it doesn't. */
