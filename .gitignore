@@ -1,0 +1,3 @@
+# Project exclude paths
+/.gradle/
+/Contacts (Kotlin)/task/build/

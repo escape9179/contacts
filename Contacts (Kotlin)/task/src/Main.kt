@@ -41,10 +41,17 @@ data class Contact(val name: String, val surname: String, private var number: St
      * @param value The new phone number
      */
     fun setNumber(value: String) {
-        /* Verify the number is in a correct phone number format using regex and pattern matching. */
+        /* This regex will match:
+         * "+0 (123) 456-789-ABcd" and "(123) 234 345-456", etc.
+         *
+         * This regex will not match "+0(123)456-789-9999", etc.
+         *
+         * Regex visual: https://regexper.com/#%28%5C%2B%5Cd%29%3F%20%3F%28%5C%28%5Cd%7B3%7D%5C%29%7C%5Cd%7B3%7D%29%5B%20-%5D%7B1%7D%5Cd%7B3%7D%5B%20-%5D%7B1%7D%5Cd%7B3%7D-%5B%5E%5CW_%5D%7B4%7D
+         */
+        val phoneNumberRegex = Regex("(\\+\\d)? ?(\\(\\d{3}\\)|\\d{3})[ -]{1}\\d{3}[ -]{1}\\d{3}-[^\\W_]{3,4}")
 
-        /* Check if the value contains a '+<1 digit #><any # of spaces>(3 digit #)' */
-        val hasParenthesisInFirstGroup = value.matches(Regex("\\+\\d *\\(\\d{3}\\)"))
+        /* Check if the number value matches the regex, and throw an error if it doesn't. */
+        if (!value.matches(phoneNumberRegex)) throw PhoneNumberFormatException()
     }
 
 
@@ -61,5 +68,5 @@ data class Contact(val name: String, val surname: String, private var number: St
 /**
  * An exception thrown when a phone number strings format isn't valid.
  */
-class PhoneNumberFormatException(message: String) : Exception(message)
+class PhoneNumberFormatException() : Exception("The number format is invalid.")
 
