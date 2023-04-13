@@ -40,7 +40,9 @@ fun main() {
             }
 
             "list" -> {
+                contacts.forEachIndexed { index, contact ->
 
+                }
             }
 
             "exit" -> {
@@ -118,5 +120,27 @@ data class Contact(val name: String, val surname: String, private var number: St
      */
     fun hasNumber(): Boolean {
         return !(number.isBlank() || number.isEmpty())
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Contact
+
+        if (name != other.name) return false
+        if (surname != other.surname) return false
+        return number == other.number
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + surname.hashCode()
+        result = 31 * result + number.hashCode()
+        return result
+    }
+
+    override fun toString(): String {
+        return "Contact(name='$name', surname='$surname', number='$number')"
     }
 }
