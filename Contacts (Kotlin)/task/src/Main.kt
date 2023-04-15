@@ -233,14 +233,52 @@ private fun collectContactInfo(): Contact {
  * @return True if the number is valid.
  */
 private fun checkNumberFormat(value: String): Boolean {
-    /* This regex will match:
-     * "+0 (123) 456-789-ABcd" and "(123) 234 345-456"
-     *
-     * This regex will not match "+0(123)456-789-9999" */
-    val phoneNumberRegex = Regex("(\\+\\d)? ?(\\(\\d{3}\\)|\\d{3})[ -]\\d{3}[ -]\\d{3}-[^\\W_]{3,4}")
+    /* Split the number into groups that will each be matched against a regex individually. */
+    val groups = value.split('-', ' ').toMutableList()
 
-    /* Check if the number value matches the regex and return the result. */
-    return value.matches(phoneNumberRegex)
+    if (groups.size > 1) {
+        var surroundedCount = 0
+        for (group in groups) {
+            /* Check if the current group is surrounded by parenthesis, increasing the count of
+            * surroundings by 1 if so. */
+            if (group.hasSurrounding('(', ')')) surroundedCount++
+
+            /* Ensures that only one group is surrounded by parenthesis. */
+            if (surroundedCount > 1) return false
+        }
+
+        var index = 0
+        while(index < groups.size) {
+            /* Remove parenthesis from group to make regex pattern matching easier. */
+            groups[index] = groups[index].removeSurrounding("(", ")")
+
+            /* Special treatment for group 1 since it can only be 1 symbol in length.
+            * If the length of the group is greater than 2 (including the + symbol) then there's a mismatch. */
+            if (index == 0) {
+                if (groups[index].length > 2 && groups[index].startsWith("+")) return false
+//                continue
+            }
+
+            /* Check each group against a regex pattern to find any mismatches.
+            * If there's a mismatch then the number is in the incorrect format. */
+            if (!groups[index].matches(Regex("[^\\W_]{2,}"))) return false
+            index++
+        }
+    } else {
+        val group = groups[0].replaceFirst("+", "").removeSurrounding("(", ")")
+        if (!group.matches(Regex("[^\\W_]+"))) return false
+    }
+
+    return true
+}
+
+/**
+ * Checks if a string is surrounded by specific characters.
+ * 
+ * @return True if this string is surrounded by the specified characters.
+ */
+private fun String.hasSurrounding(prefix: Char, suffix: Char): Boolean {
+    return this.startsWith(prefix) && this.endsWith(suffix)
 }
 
 /**
