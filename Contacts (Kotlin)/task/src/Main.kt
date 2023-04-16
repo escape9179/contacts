@@ -247,17 +247,14 @@ private fun checkNumberFormat(value: String): Boolean {
             if (surroundedCount > 1) return false
         }
 
-        var index = 0
+        /* Special treatment for group 1 since it can only be 1 symbol in length.
+        * If the length of the group is greater than 2 (including the + symbol) then there's a mismatch. */
+        if (groups[0].length > 2 && groups[0].contains("+")) return false
+
+        var index = 1
         while(index < groups.size) {
             /* Remove parenthesis from group to make regex pattern matching easier. */
             groups[index] = groups[index].removeSurrounding("(", ")")
-
-            /* Special treatment for group 1 since it can only be 1 symbol in length.
-            * If the length of the group is greater than 2 (including the + symbol) then there's a mismatch. */
-            if (index == 0) {
-                if (groups[index].length > 2 && groups[index].startsWith("+")) return false
-//                continue
-            }
 
             /* Check each group against a regex pattern to find any mismatches.
             * If there's a mismatch then the number is in the incorrect format. */
