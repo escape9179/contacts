@@ -1,5 +1,8 @@
 package contacts
 
+import java.io.File
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -15,7 +18,7 @@ const val NO_RECORDS_TO_REMOVE_MESSAGE = "No records to remove!"
 const val NO_RECORDS_TO_EDIT_MESSAGE = "No records to edit!"
 
 /** The message displayed when requesting input for a new from the user. */
-const val ENTER_ACTION_MESSAGE = "Enter action (add, remove, edit, count, list, exit):"
+const val ENTER_MAIN_MENU_ACTION_MESSAGE = "[menu] Enter action (add, list, search, count, exit):"
 
 /** The message displayed when requesting the user to select a record */
 private const val SELECT_A_RECORD_MESSAGE = "Select a record:"
@@ -29,8 +32,8 @@ private const val SELECT_PERSONAL_CONTACT_FIELD_MESSAGE = "Select a field (name,
 /** The message displayed when the user enters a non-existent record number. */
 private const val INVALID_RECORD_NUMBER = "Invalid record."
 
-/** The message displayed when a contact record is updated. */
-private const val RECORD_UPDATED_MESSAGE = "Record updated!"
+/** The message displayed when a contact record is saved. */
+private const val SAVED_MESSAGE = "Saved"
 
 /** The message displayed when a non-existent or invalid record field name was entered. */
 private const val INVALID_RECORD_FIELD_MESSAGE = "Invalid record field!"
@@ -80,50 +83,35 @@ private const val ENTER_INDEX_FOR_INFO_MESSAGE = "Enter index to show info:"
 /** The text displayed in place of a non-existent contact number. */
 const val NO_NUMBER_TEXT = "[no number]"
 
-val contacts = mutableListOf<Contact>()
+/** The list of contacts. */
+var contacts = mutableListOf<Contact>()
 
-fun main() {
+var dataFile: File? = null
+
+fun main(args: Array<out String>) {
+    /* If an argument is specified then a file name has been specified.
+    * If the file already exists, load contact data from that file, and if it doesn't exist then
+    * create a new file to save contact data to. */
+    if (args.isNotEmpty()) {
+        dataFile = File(args[0])
+        if (!dataFile?.exists()!!) {
+            dataFile?.createNewFile()
+        } else {
+            val inputStream = ObjectInputStream(dataFile?.inputStream())
+            contacts = inputStream.readObject() as MutableList<Contact>
+        }
+    }
+
     while (true) {
-        println(ENTER_ACTION_MESSAGE)
+        println(ENTER_MAIN_MENU_ACTION_MESSAGE)
 
         val input = readln()
 
         when (input.lowercase()) {
-            "add" -> {
-                /* Attempt to collect information about the contact being added.
+            "add" -> {/* Attempt to collect information about the contact being added.
                 * If null is returned then there was an error or invalid data was entered. */
                 val contact = collectContactInfo() ?: continue
                 contacts.add(contact)
-            }
-
-            "remove" -> {
-                if (contacts.isEmpty()) {
-                    println(NO_RECORDS_TO_REMOVE_MESSAGE)
-                    continue
-                }
-
-                listContacts()
-                println(SELECT_A_RECORD_MESSAGE)
-
-                /* Request a contact from the number list from the user. */
-                val record = readln().toIntOrNull()
-
-                /* Make sure the input is a number. */
-                if (record == null) {
-                    println(YOU_MUST_ENTER_NUMBER_MESSAGE)
-                    continue
-                }
-
-                val recordIndex = record - 1
-
-                /* Make sure the record index is a valid index. */
-                if (0 > recordIndex || recordIndex >= contacts.size) {
-                    println(INVALID_RECORD_NUMBER)
-                    continue
-                }
-
-                contacts.removeAt(recordIndex)
-                println(RECORD_REMOVED_MESSAGE)
             }
 
             "edit" -> {
@@ -157,100 +145,16 @@ fun main() {
                     continue
                 }
 
-                val contact = contacts[recordIndex]
+                editContact(contacts[recordIndex])
 
-                /* Depending on the type contact, collection information suitable for it. */
-                when (contact) {
-                    is PersonalContact -> {
-                        /* Request a contact field to edit from the user. */
-                        println(SELECT_PERSONAL_CONTACT_FIELD_MESSAGE)
-                        when (readln().lowercase()) {
-                            "name" -> {
-                                println(ENTER_NAME_MESSAGE)
-                                contact.name = readln()
-                                println(RECORD_UPDATED_MESSAGE)
-                            }
-
-                            "surname" -> {
-                                println(ENTER_SURNAME_MESSAGE)
-                                contact.surname = readln()
-                                println(RECORD_UPDATED_MESSAGE)
-                            }
-
-                            "birthdate" -> {
-                                println("Enter birthdate:")
-                                val birthdate = readln()
-
-                                if (!checkBirthdateFormat(birthdate)) {
-                                    println(BAD_BIRTH_DATE_MESSAGE)
-                                }
-
-                                contact.birthdate = birthdate
-                            }
-
-                            "gender" -> {
-                                println("Enter gender:")
-                                val gender = readln()
-
-                                if (!checkGenderFormat(gender)) {
-                                    println(BAD_GENDER_MESSAGE)
-                                }
-                                
-                                contact.gender = gender
-                            }
-
-                            "number" -> {
-                                println(ENTER_NUMBER_MESSAGE)
-                                var number = readln()
-                                if (!checkNumberFormat(number)) {
-                                    println(WRONG_NUMBER_FORMAT_MESSAGE)
-                                    number = ""
-                                }
-                                contact.number = number
-                            }
-
-                            else -> {
-                                println(INVALID_RECORD_FIELD_MESSAGE)
-                            }
-                        }
-                    }
-
-                    is BusinessContact -> {
-                        /* Request a contact field to edit from the user. */
-                        println("Select a field (address, number):")
-                        when (readln().lowercase()) {
-                            "address" -> {
-                                println("Enter address:")
-                                val address = readln()
-                                contact.address = address
-                            }
-
-                            "number" -> {
-                                println(ENTER_NUMBER_MESSAGE)
-                                var number = readln()
-                                if (!checkNumberFormat(number)) {
-                                    println(WRONG_NUMBER_FORMAT_MESSAGE)
-                                    number = ""
-                                }
-                                contact.number = number
-                            }
-
-                            else -> {
-                                println(INVALID_RECORD_FIELD_MESSAGE)
-                            }
-                        }
-
-                    }
-                }
-
-                println(RECORD_UPDATED_MESSAGE)
+                println(SAVED_MESSAGE)
             }
 
             "count" -> {
                 println(PHONE_BOOK_COUNT_MESSAGE.format(contacts.size))
             }
 
-            "info" -> {
+            "list" -> {
                 listContacts()
 
                 /* Request the user for an index into the contact list to then
@@ -258,6 +162,81 @@ fun main() {
                 println(ENTER_INDEX_FOR_INFO_MESSAGE)
                 val index = readln().toInt() - 1
                 println(contacts[index].getInfo())
+                println()
+
+                while (true) {
+                    println("[record] Enter action (edit, delete, menu):")
+
+                    when (readln().lowercase()) {
+                        /* Exit the search loop which brings the user back to the main menu. */
+                        "menu" -> {
+                            break
+                        }
+
+                        "delete" -> {
+                            contacts.removeAt(index)
+                            println(RECORD_REMOVED_MESSAGE)
+                        }
+
+                        "edit" -> {
+                            editContact(contacts[index])
+                        }
+                    }
+
+                    println()
+                }
+            }
+
+            "search" -> {
+                var action: String
+                var results = performSearch()
+                println()
+
+                while (true) {
+                    println("[search] Enter action ([number], back, again):")
+                    action = readln().lowercase()
+
+                    when {
+                        /* When the action entered is a number, display the info about the contact
+                        * at the specified index. */
+                        action.toIntOrNull() != null -> {
+                            val index = action.toInt() - 1
+                            println(results[index].getInfo())
+                            println()
+
+                            println("[record] Enter action (edit, delete, menu):")
+                            action = readln().lowercase()
+
+                            when (action) {
+                                /* Exit the search loop which brings the user back to the main menu. */
+                                "menu" -> {
+                                    break
+                                }
+
+                                "delete" -> {
+                                    contacts.removeAt(index)
+                                    println(RECORD_REMOVED_MESSAGE)
+                                }
+
+                                "edit" -> {
+                                    editContact(results[index])
+                                }
+                            }
+                        }
+
+                        /* This option takes the user back to the main menu. */
+                        action.equals("back", true) -> {
+                            break
+                        }
+
+                        /* Start another search. */
+                        action.equals("again", true) -> {
+                            results = performSearch()
+                        }
+                    }
+
+                    println()
+                }
             }
 
             "exit" -> {
@@ -267,6 +246,105 @@ fun main() {
 
         println()
     }
+}
+
+/**
+ * Saves the contact list to the data file.
+ */
+private fun saveContacts() {
+    if (dataFile?.exists() ?: return) {
+        ObjectOutputStream(dataFile?.outputStream()).writeObject(contacts)
+        println(SAVED_MESSAGE)
+    }
+}
+
+private fun editContact(contact: Contact) {
+    println("Select a field (${contact.properties.joinToString()}):")
+
+    when (readln().lowercase()) {
+        "name" -> {
+            println(ENTER_NAME_MESSAGE)
+            contact.name = readln()
+            saveContacts()
+        }
+
+        "surname" -> {
+            println(ENTER_SURNAME_MESSAGE)
+            (contact as PersonalContact).surname = readln()
+            saveContacts()
+        }
+
+        "birthdate" -> {
+            println("Enter birthdate:")
+            var birthdate = readln()
+
+            if (!checkBirthdateFormat(birthdate)) {
+                println(BAD_BIRTH_DATE_MESSAGE)
+                birthdate = ""
+            }
+
+            (contact as PersonalContact).birthdate = birthdate
+            saveContacts()
+        }
+
+        "gender" -> {
+            println("Enter gender:")
+            var gender = readln()
+
+            if (!checkGenderFormat(gender)) {
+                println(BAD_GENDER_MESSAGE)
+                gender = ""
+            }
+
+            (contact as PersonalContact).gender = gender
+            saveContacts()
+        }
+
+        "number" -> {
+            println(ENTER_NUMBER_MESSAGE)
+            var number = readln()
+            if (!checkNumberFormat(number)) {
+                println(WRONG_NUMBER_FORMAT_MESSAGE)
+                number = ""
+            }
+
+            contact.number = number
+            saveContacts()
+        }
+
+        "address" -> {
+            println("Enter address:")
+            val address = readln()
+
+            (contact as BusinessContact).address = address
+            saveContacts()
+        }
+
+        else -> {
+            println(INVALID_RECORD_FIELD_MESSAGE)
+        }
+    }
+
+    println(contact.getInfo())
+}
+
+/**
+ * Searches through all contacts matching any containing the query regex.
+ *
+ * @return A list of contacts matching the query.
+ */
+private fun performSearch(): List<Contact> {
+    /* Request a search query from the user. */
+    println("Enter search query:")
+    val query = readln()
+
+    /* Filter contact names that match the query regex, print the number of results found, then
+    * print out the results in a numbered list. */
+    val results = contacts.filter { Regex(query, RegexOption.IGNORE_CASE).containsMatchIn(it.propertyValues) }
+    println("Found ${results.size} results:")
+    results.forEachIndexed { index, contact -> println("${index + 1}. ${contact.name}${if (contact is PersonalContact) " " + contact.surname else ""}") }
+
+    return results
 }
 
 /**
@@ -341,8 +419,7 @@ private fun collectContactInfo(): Contact? {
  * Lists all contacts in the contact list as a numbered list in format:
  * <index + 1>. <name>
  */
-fun listContacts() {
-    /* Prints the contact book out as a numbered list. */
+fun listContacts() {/* Prints the contact book out as a numbered list. */
     contacts.forEachIndexed { index, contact ->
         println("${index + 1}. ${contact.name}${if (contact is PersonalContact) " " + contact.surname else ""}")
     }
@@ -352,8 +429,7 @@ fun listContacts() {
  * This function goes through the process of requesting a phone number from the user and checking the formatting
  * of the phone number before returning the number, valid, or blank if invalid.
  */
-private fun requestPhoneNumber(): String {
-    /* Read the phone number of the contact from input. */
+private fun requestPhoneNumber(): String {/* Read the phone number of the contact from input. */
     println(ENTER_NUMBER_MESSAGE)
     var number = readln()
 
@@ -374,14 +450,12 @@ private fun requestPhoneNumber(): String {
  * @param value The phone number to check.
  * @return True if the number is valid.
  */
-private fun checkNumberFormat(value: String): Boolean {
-    /* Split the number into groups that will each be matched against a regex individually. */
+private fun checkNumberFormat(value: String): Boolean {/* Split the number into groups that will each be matched against a regex individually. */
     val groups = value.split('-', ' ').toMutableList()
 
     if (groups.size > 1) {
         var surroundedCount = 0
-        for (group in groups) {
-            /* Check if the current group is surrounded by parenthesis, increasing the count of
+        for (group in groups) {/* Check if the current group is surrounded by parenthesis, increasing the count of
             * surroundings by 1 if so. */
             if (group.hasSurrounding('(', ')')) surroundedCount++
 
@@ -394,8 +468,7 @@ private fun checkNumberFormat(value: String): Boolean {
         if (groups[0].length > 2 && groups[0].contains("+")) return false
 
         var index = 1
-        while (index < groups.size) {
-            /* Remove parenthesis from group to make regex pattern matching easier. */
+        while (index < groups.size) {/* Remove parenthesis from group to make regex pattern matching easier. */
             groups[index] = groups[index].removeSurrounding("(", ")")
 
             /* Check each group against a regex pattern to find any mismatches.
@@ -436,15 +509,27 @@ private fun String.hasSurrounding(prefix: Char, suffix: Char): Boolean {
 /**
  * Represents a contact like those seen in a contact book. A contact has a name, surname, and phone number.
  */
-open class Contact(var name: String, var number: String = "") {
+abstract class Contact(var name: String, var number: String = "") {
     val timeCreated: LocalDateTime
     var timeLastEdit: LocalDateTime
+
+    /**  Returns the list of property names that are modifiable for this contact. */
+    abstract val properties: List<String>
+
+    abstract val propertyValues: String
 
     init {
         val time = LocalDateTime.now().truncatedTo(ChronoUnit.MINUTES)
         timeCreated = time
         timeLastEdit = time
     }
+
+    /**
+     * Returns information about this contact.
+     *
+     * @return Information about this contact.
+     */
+    abstract fun getInfo(): String
 
     /**
      * Checks if this contact has a phone number assigned to it.
@@ -474,18 +559,6 @@ open class Contact(var name: String, var number: String = "") {
     override fun toString(): String {
         return "Contact(name='$name', number='$number')"
     }
-
-    /**
-     * Returns information about this contact.
-     *
-     * @return Information about this contact.
-     */
-    open fun getInfo(): String {
-        return """
-            Name: $name
-            Number: $number
-        """.trimIndent()
-    }
 }
 
 /**
@@ -494,6 +567,10 @@ open class Contact(var name: String, var number: String = "") {
  */
 class PersonalContact(name: String, var surname: String, var birthdate: String, var gender: String, number: String) :
     Contact(name, number) {
+    override val properties: List<String>
+        get() = listOf("name", "surname", "birthdate", "gender", "number")
+    override val propertyValues: String
+        get() = "$name$surname$birthdate$gender$number"
 
     /**
      * Gets information about a personal contact such as the name, surname, birthdate, gender, and phone number.
@@ -501,8 +578,7 @@ class PersonalContact(name: String, var surname: String, var birthdate: String, 
      *
      * @return Information about this contact and its creation and modification dates and times.
      */
-    override fun getInfo(): String {
-        /* This is the formatter for the birthday. */
+    override fun getInfo(): String {/* This is the formatter for the birthday. */
         val birthdateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         return """
             Name: $name
@@ -556,6 +632,11 @@ class PersonalContact(name: String, var surname: String, var birthdate: String, 
  * Company information has the name of the company, its address, and its phone number.
  */
 class BusinessContact(name: String, var address: String, number: String) : Contact(name, number) {
+    override val properties: List<String>
+        get() =  listOf("name", "address", "number")
+    override val propertyValues: String
+        get() = "$name$address$number"
+
     /**
      * Gets information about a company such as the company name, address, number.
      * The time this contact was created, and the last time this contact was edited is also included.
